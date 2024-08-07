@@ -92,6 +92,8 @@ static const QString CONTAINER_XML       = "<?xml version=\"1.0\" encoding=\"UTF
 
 static QStringDecoder *cp437 = nullptr;
 
+static  const QString SEP = QString(QChar(31));
+
 // Constructor;
 // The parameter is the file to be imported
 ImportEPUB::ImportEPUB(const QString &fullfilepath)
@@ -151,9 +153,9 @@ QSharedPointer<Book> ImportEPUB::GetBook(bool extract_metadata)
     }
     
     if (!notInManifest.isEmpty()) {
-        QApplication::restoreOverrideCursor();
-        Utility::DisplayStdWarningDialog(tr("Files exist in epub that are not listed in the manifest, they will be ignored"), notInManifest.join("\n"));
-        QApplication::setOverrideCursor(Qt::WaitCursor);
+        QString warning = tr("Files exist in epub that are not listed in the manifest, they will be ignored.");
+        warning = warning + SEP + notInManifest.join("\n"); 
+        AddLoadWarning(warning);
     }
 
     LoadFolderStructure();
@@ -172,7 +174,8 @@ QSharedPointer<Book> ImportEPUB::GetBook(bool extract_metadata)
         }
     }
 
-    bool checkit = ((ss.cleanOn() & CLEANON_OPEN) == CLEANON_OPEN);
+    bool autofix = ((ss.cleanOn() & CLEANON_OPEN) == CLEANON_OPEN);
+    bool checkit = true;
 
     QFuture<std::pair<HTMLResource*, bool> > html_future;
     html_future = QtConcurrent::mapped(hresources, std::bind(InitialLoadAndCheckOneHTMLFile, std::placeholders::_1, checkit));
@@ -183,23 +186,28 @@ QSharedPointer<Book> ImportEPUB::GetBook(bool extract_metadata)
         }
     }
     if (!non_well_formed.isEmpty()) {
-        QApplication::restoreOverrideCursor();
-        if (QMessageBox::Yes == Utility::warning(QApplication::activeWindow(),
-                tr("Sigil"),
-                tr("This EPUB has HTML files that are not well formed or are "
-                   "missing a DOCTYPE, html, head or body elements. "
-                   "Sigil can automatically fix these files, although "
-                   "this may very rarely result in minor data loss in extreme circumstances.\n\n"
-                   "Do you want to automatically fix the files?"),
-                                                 QMessageBox::Yes|QMessageBox::No, QMessageBox::Yes)) 
-        {
+        QStringList problem_files;
+        foreach(HTMLResource* htmlres, non_well_formed) {
+            problem_files << htmlres->GetRelativePath();
+        }
+        if (autofix) {
             foreach(HTMLResource* htmlres, non_well_formed) {
                 QString fixed_text = CleanSource::Mend(htmlres->GetText(),htmlres->GetEpubVersion());
                 htmlres->SetText(fixed_text);
             }
             non_well_formed.clear();
+            QString warning = tr("This EPUB had HTML files that were not well formed or are "
+                   "missing a DOCTYPE, html, head or body elements.<br/><br>They were automatically fixed based on "
+                   "your Preference setting to Clean on Open.");
+            warning = warning + SEP + problem_files.join("\n");
+            AddLoadWarning(warning);
+        } else {
+            QString warning = tr("This EPUB has HTML files that are not well formed or are "
+                   "missing a DOCTYPE, html, head or body elements.<br/></br>Fix these manually or use "
+                                 "Sigil's Mend tool to automatically fixed these errors or omissions.");
+            warning = warning + SEP + problem_files.join("\n");
+            AddLoadWarning(warning);
         }
-        QApplication::setOverrideCursor(Qt::WaitCursor);
     }
 
     ProcessFontFiles(resources, encrypted_files);
@@ -432,11 +440,13 @@ void ImportEPUB::ExtractContainer()
             QString qfile_name;
             QString cp437_file_name;
             qfile_name = QString::fromUtf8(file_name);
+            // must do this unconditionally by epub spec
             qfile_name = qfile_name.normalized(QString::NormalizationForm_C);
             if (!(file_info.flag & (1<<11))) {
                 // General purpose bit 11 says the filename is utf-8 encoded. If not set then
                 // IBM 437 encoding might be used.
                 cp437_file_name = cp437->decode(file_name);
+                // must do this unconditionally by epub spec
                 cp437_file_name = cp437_file_name.normalized(QString::NormalizationForm_C);
             }
             QDate moddate = QDate(file_info.tmu_date.tm_year,
@@ -633,7 +643,7 @@ void ImportEPUB::LocateOPF()
     }
 
     if (num_opf > 1) {
-        Utility::DisplayStdWarningDialog(tr("This epub has multiple renditions (multiple OPF files). Editing this epub in Sigil will produce a normal single rendition epub using only the main (first) OPF file found."),"");
+        AddLoadWarning(QObject::tr("This epub has multiple renditions (multiple OPF files). Editing this epub in Sigil will produce a normal single rendition epub using only the main (first) OPF file found."));
     }
 
     if (m_OPFFilePath.isEmpty() || !QFile::exists(m_OPFFilePath)) {
@@ -788,6 +798,7 @@ void ImportEPUB::ReadManifestItemElement(QXmlStreamReader *opf_reader)
     if (href.indexOf(':') == -1) {
         // we know we have a relative href to a file so no fragments can exist
         apath = Utility::URLDecodePath(href);
+        // must do this unconditionally by epub spec
         apath = apath.normalized(QString::NormalizationForm_C);
     }
     // for hrefs pointing outside the epub, apath will be empty

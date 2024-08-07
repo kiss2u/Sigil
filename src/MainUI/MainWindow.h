@@ -119,9 +119,6 @@ public:
 
     void maybe_fixup_dockwidget_geometry(QDockWidget * widget);
 
-    // returns true if MainWindow is Maximized or is FullScreen
-    bool isMaxOrFull();
-
     /**
      * The book currently being edited.
      *
@@ -289,6 +286,7 @@ public slots:
     void EditAutomate(const QString &automatefile);
     
     bool StandardizeEpub();
+    bool RebaseManifestIDs();
 
     void CreateEpubLayout();
 
@@ -323,12 +321,7 @@ protected:
 
 private slots:
 
-    void UpdateLastSizes();
-
-    void RestoreLastNormalGeometry();
-
     bool AddCover();
-
 
     /**
      * Implements New action functionality.
@@ -705,7 +698,6 @@ private slots:
     void unloadPluginsMenu();
 
 private:
-    void createJumpList();
     void updateToolTipsOnPluginIcons();
     void UpdateClipButton(QAction *ui_action);
     void InsertFiles(const QStringList &selected_images);
@@ -903,6 +895,8 @@ private:
     QStringList m_LastOpenFileWarnings;
     bool m_IsInitialLoad;
 
+    QByteArray m_LastState;
+    
     /**
      * The path to the current file loaded.
      */
@@ -1046,11 +1040,7 @@ private:
     /**
      * Workaround for Qt 4.8 bug, to track the last known window size when not maximized.
      */
-    QByteArray m_LastWindowSize;
-    QByteArray m_LastState;
     bool m_FirstTime;
-    bool m_PendingLastSizeUpdate;
-    bool m_SaveLastEnabled;
 
     QTimer m_PreviewTimer;
 

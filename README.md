@@ -2,7 +2,7 @@ Sigil
 =====
 
 Sigil is a free, open source, multi-platform ebook editor that uses
-Qt (and QtWebEngine). It is designed to edit books in ePub format (both ePub 2 and ePub 3).
+Qt6 (and QtWebEngine). It is designed to edit books in ePub format (both ePub 2 and ePub 3).
 
 
 Links
@@ -46,7 +46,7 @@ For newer Linux systems like Ubuntu 23.04 (and its derivitives), or Arch Linux, 
 
 The Qt6 build documentation strives to provide both Debian- and Arch-based package names.
 
-For older Linux systems whose software repositories do not provide Qt6.2.3 (or higher), the
+For older Linux systems whose software repositories do not provide Qt6.4.0 (or higher), the
 detailed instructions for building/installing Sigil with Qt5 can be found in:
 
 > [docs/Building_on_Linux_older.md](./docs/Building_on_Linux.md)
@@ -59,29 +59,20 @@ For Building on Mac OS X
 Building using purely XCode is no longer supported on Mac OS X.  The easiest 
 way to build Sigil on Mac OS X is to use cmake 3.X and the XCode CommandLineTools.   
 
-Also because Sigil now embeds Python 3.11.3, see  
+Also because Sigil now embeds Python 3.11.9, see  
 
 > [docs/Building_A_Relocatable_Python_3.11_Framework_on_MacOSX.txt](./docs/Building_A_Relocatable_Python_3.11_Framework_on_MacOSX.txt)
 
 for detailed instructions on how to build a fully relocatable Python 3.11.3 framework before
 building Sigil.  
 
-For official releases Sigil uses Qt6.6.2 plus official local patches see:  
+For official releases Sigil uses Qt6.7.2 plus official local patches see:  
 
 > [docs/Building_Qt6_From_Source_on_MacOSX.txt](./docs/Building_Qt6_From_Source_on_MacOSX.txt)
-
-Sigil master now supports building with Qt-5.10.X through to Qt-6.6.2.  For older Qt5 see:
-
-> [docs/Building_Qt5_From_Source_on_MacOSX.txt](./docs/Building_Qt5_From_Source_on_MacOSX.txt)
 
 And finally to build Sigil itself see:
 
 > [docs/Building_Sigil_On_MacOSX_With_Qt6.txt](./docs/Building_Sigil_On_MacOSX_With_Qt6.txt)
-
-and for building Sigil under the older Qt5 see:
-
-> [docs/Building_Sigil_On_MacOSX_With_Qt5.txt](./docs/Building_Sigil_On_MacOSX_With_Qt5.txt)
-
 
 
 For Installing/Building on Windows
@@ -113,7 +104,7 @@ Currently these projects include:
 
 * Hunspell 1.7.2 - https://github.com/hunspell/hunspell
 * MiniZip version 1.1 (plus some security changes)
-* Perl-compatible Regular Expression Library 2 (pcre2 version 10.43)
+* Perl-compatible Regular Expression Library 2 (pcre2 version 10.44)
 * ZLib Data Compression Library (zlib 1.3.1)
 * jQuery-3.6.4 (src/Resource_Files/javascript/jquery-3.6.4.min.js)
 * jQuery.ScrollTo-2.1.2 (src/Resource_Files/javascript/jquery.scrollTo-2.1.2.min.js)

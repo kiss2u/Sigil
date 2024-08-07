@@ -177,9 +177,9 @@ public:
      */
     static QString URLDecodePath(const QString &path);
 
-    static void DisplayStdErrorDialog(const QString &error_message, const QString &detailed_text = QString());
+    static void DisplayStdErrorDialog(const QString &error_message, const QString &detailed_text = QString(), QWidget* parent = nullptr);
 
-    static void DisplayStdWarningDialog(const QString &warning_message, const QString &detailed_text = QString());
+    static void DisplayStdWarningDialog(const QString &warning_message, const QString &detailed_text = QString(), QWidget* parent = nullptr);
 
     static void DisplayExceptionErrorDialog(const QString &error_info);
 
@@ -277,6 +277,7 @@ public:
     static QString FixupSvgForRendering(const QString& data);
     static QImage  RenderSvgToImage(const QString& filepath);
 
+    static QString UseNFC(const QString& text);
 };
 #endif // UTILITY_H
 

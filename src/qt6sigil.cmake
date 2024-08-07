@@ -2,7 +2,7 @@
 #     Build Sigil against Qt6 - requires cmake 3.16+ and a C++17 compiler
 #############################################################################
 
-# quiet Qt 6 deprecat4ed warnings for now as we must support Qt 5.12.X and even earlier
+# quiet Qt 6 deprecat4ed warnings
 # add_definitions(-DQT_NO_DEPRECATED_WARNINGS)
 add_definitions(-DQT_IMPLICIT_QCHAR_CONSTRUCTION)
 
@@ -10,7 +10,7 @@ if (CMAKE_VERSION VERSION_GREATER "3.27.9")
     cmake_policy(SET CMP0153 OLD)
 endif()
 
-set(QT6_NEEDED 6.2)
+set(QT6_NEEDED 6.4)
 
 # Qt6 gets shiny new(ish) teal icons
 if( UNIX AND NOT APPLE )
@@ -441,6 +441,20 @@ elseif (MSVC)
         add_custom_command( TARGET ${TARGET_FOR_COPY} POST_BUILD COMMAND cmake -E copy ${UITOOLS} ${MAIN_PACKAGE_DIR} )
     endif()
 
+    # Copy ICU libs. Windeployqt does not always pick up all three.
+    set( ICU_BIN_LIBS icudt icuin icuuc )
+    add_custom_command( TARGET ${TARGET_FOR_COPY} PRE_BUILD COMMAND cmake -E make_directory ${MAIN_PACKAGE_DIR}/ )
+    foreach( lib ${ICU_BIN_LIBS} )
+        # If the three are there (any version), copy them. Otherwise keep going without them.
+        file( GLOB ICU_LIB ${QT_INSTALL_BINS}/${lib}*.dll )
+        list( LENGTH ICU_LIB PATHS_LEN )
+        if( PATHS_LEN GREATER 0 )
+            foreach( ICU ${ICU_LIB} )
+                add_custom_command( TARGET ${TARGET_FOR_COPY} PRE_BUILD COMMAND cmake -E copy ${ICU} ${MAIN_PACKAGE_DIR}/ )
+            endforeach( ICU )
+        endif()
+    endforeach( lib )
+
     # Copy the translation qm files
     add_custom_command( TARGET ${TARGET_FOR_COPY} PRE_BUILD COMMAND cmake -E make_directory ${MAIN_PACKAGE_DIR}/translations/ )
     foreach( QM ${QM_FILES} )
@@ -649,7 +663,7 @@ if( UNIX AND NOT APPLE )
     install( FILES ${EXT_RCC_FILES} DESTINATION ${SIGIL_SHARE_ROOT}/iconthemes/ )
     if ( MATHJAX3_DIR )
         # Fixme - we need to figure out how to specify svg with mml3 extension only for external mathjax
-        # install( FILES ${CMAKE_SOURCE_DIR}/src/Resource_Files/polyfills/SIGIL_EBOOK_MML_SVG.js DESTINATION ${MATHJAX_DIR}/config/local/ )
+        # install( FILES ${CMAKE_SOURCE_DIR}/src/Resource_Files/polyfills/SIGIL_EBOOK_MML_SVG.js DESTINATION ${MATHJAX3_DIR}/config/local/ )
     else()
         install( FILES ${MATHJAX_CUSTOM} DESTINATION ${SIGIL_SHARE_ROOT}/polyfills/ )
     endif()

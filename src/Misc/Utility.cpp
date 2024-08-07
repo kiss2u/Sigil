@@ -91,20 +91,20 @@ static const QString DARK_STYLE =
 static QStringDecoder *cp437 = nullptr;
 
 // Subclass QMessageBox for our StdWarningDialog to make any Details Resizable
+// Unfortunately, under Qt6 this will not work no matter what you try,  if you
+// manually resize it Qt will just force it back after any change.
+// Keep the subclass in case we want to create our own QMessageBox at ssome point
+// but forget about the resize
 class SigilMessageBox: public QMessageBox
 {
     public:
         SigilMessageBox(QWidget* parent) : QMessageBox(parent) 
         {
-            setSizeGripEnabled(true);
         }
     private:
+
         virtual void resizeEvent(QResizeEvent * e) {
             QMessageBox::resizeEvent(e);
-            setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
-            if (QWidget *textEdit = findChild<QTextEdit *>()) {
-                textEdit->setMaximumHeight(QWIDGETSIZE_MAX);
-            }
         }
 };
 
@@ -143,15 +143,6 @@ bool Utility::WindowsShouldUseDarkMode()
 {
     return IsWindowsSysDarkMode();
     // No more forcing of light/dark on Windows: use Windows settings.
-#if 0
-    QString override(GetEnvironmentVar("SIGIL_USES_DARK_MODE"));
-    if (override.isEmpty()) {
-        //Env var unset - use system registry setting.
-        return IsWindowsSysDarkMode();
-    }
-    // Otherwise use the env var: anything other than "0" is true.
-    return (override == "0" ? false : true);
-#endif
 }
 
 #if !defined(Q_OS_WIN32) && !defined(Q_OS_MAC)
@@ -547,7 +538,7 @@ QString Utility::ReadUnicodeTextFile(const QString &fullfilepath)
 // file; if the file exists, it is truncated
 void Utility::WriteUnicodeTextFile(const QString &text, const QString &fullfilepath)
 {
-    QString newtext = text.normalized(QString::NormalizationForm_C);
+    QString newtext = Utility::UseNFC(text);
     QFile file(fullfilepath);
 
     if (!file.open(QIODevice::WriteOnly |
@@ -569,8 +560,7 @@ void Utility::WriteUnicodeTextFile(const QString &text, const QString &fullfilep
 // line endings that are expected throughout the Qt framework
 QString Utility::ConvertLineEndingsAndNormalize(const QString &text)
 {
-    QString newtext(text);
-    newtext = newtext.normalized(QString::NormalizationForm_C);
+    QString newtext = Utility::UseNFC(text);
     return newtext.replace("\x0D\x0A", "\x0A").replace("\x0D", "\x0A");
 }
 
@@ -640,6 +630,7 @@ QString Utility::URLEncodePath(const QString &path)
     QString newpath = DecodeXML(path);
 
     // The epub spec says all paths must use Unicode Normalization Form C (NFC)
+    // So do NOT Use Utility::UseNFC which conditionalizes things
     newpath = newpath.normalized(QString::NormalizationForm_C);
 
     // then undo any existing url encoding
@@ -682,6 +673,7 @@ QString Utility::URLDecodePath(const QString &path)
     apath = DecodeXML(apath);
     QString newpath = QUrl::fromPercentEncoding(apath.toUtf8());
     // epub spec says all paths must use Normalization Form C (NFC)
+    // Do Not use Utility::UseNFC as it conditionalizes it
     newpath = newpath.normalized(QString::NormalizationForm_C);
     return newpath;
 }
@@ -715,12 +707,10 @@ void Utility::DisplayExceptionErrorDialog(const QString &error_info)
 }
 
 
-void Utility::DisplayStdErrorDialog(const QString &error_message, const QString &detailed_text)
+void Utility::DisplayStdErrorDialog(const QString &error_message, const QString &detailed_text, QWidget* parent)
 {
-    QWidget * parent = QApplication::activeWindow();
     QMessageBox message_box(parent);
-    message_box.setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
-    message_box.setModal(true);
+    message_box.setWindowModality(Qt::ApplicationModal);
     message_box.setIcon(QMessageBox::Critical);
     message_box.setWindowTitle("Sigil");
     message_box.setText(error_message);
@@ -731,18 +721,13 @@ void Utility::DisplayStdErrorDialog(const QString &error_message, const QString 
 
     message_box.setStandardButtons(QMessageBox::Close);
     message_box.exec();
-#ifdef Q_OS_MAC    
-    if (parent) parent->activateWindow();
-#endif
 }
 
 
-void Utility::DisplayStdWarningDialog(const QString &warning_message, const QString &detailed_text)
+void Utility::DisplayStdWarningDialog(const QString &warning_message, const QString &detailed_text, QWidget * parent)
 {
-    QWidget * parent = QApplication::activeWindow();
     SigilMessageBox message_box(parent);
-    message_box.setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
-    message_box.setModal(true);
+    message_box.setWindowModality(Qt::ApplicationModal);
     message_box.setIcon(QMessageBox::Warning);
     message_box.setWindowTitle("Sigil");
     message_box.setText(warning_message);
@@ -753,9 +738,6 @@ void Utility::DisplayStdWarningDialog(const QString &warning_message, const QStr
     }
     message_box.setStandardButtons(QMessageBox::Ok);
     message_box.exec();
-#ifdef Q_OS_MAC    
-    if (parent) parent->activateWindow();
-#endif    
 }
 
 // Returns a value for the environment variable name passed;
@@ -859,11 +841,13 @@ bool Utility::UnZip(const QString &zippath, const QString &destpath)
             QString qfile_name;
             QString cp437_file_name;
             qfile_name = QString::fromUtf8(file_name);
+            // must do this unconditionally for epub spec
             qfile_name = qfile_name.normalized(QString::NormalizationForm_C);
             if (!(file_info.flag & (1<<11))) {
                 // General purpose bit 11 says the filename is utf-8 encoded. If not set then
                 // IBM 437 encoding might be used.
                 cp437_file_name = cp437->decode(file_name);
+                // must do this unconditionally for epub spec
                 cp437_file_name = cp437_file_name.normalized(QString::NormalizationForm_C);
             }
 
@@ -1007,9 +991,11 @@ QStringList Utility::ZipInspect(const QString &zippath)
             QString qfile_name;
             QString cp437_file_name;
             qfile_name = QString::fromUtf8(file_name);
+            // must do this unconditionally for epub spec
             qfile_name = qfile_name.normalized(QString::NormalizationForm_C);
             if (!(file_info.flag & (1<<11))) {
                 cp437_file_name = cp437->decode(file_name);
+                // must do this unconditionally for epub spec
                 cp437_file_name = cp437_file_name.normalized(QString::NormalizationForm_C);
             }
 
@@ -1531,4 +1517,17 @@ QImage Utility::RenderSvgToImage(const QString& filepath)
     renderer.render(&painter);
     return svgimage;
 
+}
+
+
+QString Utility::UseNFC(const QString& text)
+{
+    QString txt;
+    MainApplication *mainApplication = qobject_cast<MainApplication *>(qApp);
+    if (mainApplication->AlwaysUseNFC()) {
+        txt = text.normalized(QString::NormalizationForm_C);
+    } else {
+        txt = text;
+    }
+    return txt;
 }

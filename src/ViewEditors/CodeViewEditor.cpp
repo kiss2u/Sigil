@@ -149,9 +149,10 @@ QString CodeViewEditor::cursor_selected_text(const QTextCursor& c) const
     QChar *e = uc + txt.size();
     for (; uc != e; ++uc) {
         switch (uc->unicode()) {
+            // pass QChar::ParagraphSeparator through unchanged for ApplyList to
+            // work properly and not create improperly nested code
             case 0xfdd0: // QTextBeginningOfFrame
             case 0xfdd1: // QTextEndOfFrame
-            case QChar::ParagraphSeparator:
             case QChar::LineSeparator:
                 *uc = QLatin1Char('\n');
                 break;
@@ -159,7 +160,8 @@ QString CodeViewEditor::cursor_selected_text(const QTextCursor& c) const
             ;
         }
     }
-    return txt.normalized(QString::NormalizationForm_C);
+    txt = Utility::UseNFC(txt);
+    return txt;
 }
 
 
@@ -711,13 +713,12 @@ int CodeViewEditor::CalculateLineNumberAreaWidth()
 
 void CodeViewEditor::ReplaceDocumentText(const QString &new_text)
 {
-    QString newtxt(new_text);
-    newtxt = newtxt.normalized(QString::NormalizationForm_C);
+    QString txt = Utility::UseNFC(new_text);
     QTextCursor cursor = textCursor();
     cursor.beginEditBlock();
     cursor.select(QTextCursor::Document);
     cursor.removeSelectedText();
-    cursor.insertText(newtxt);
+    cursor.insertText(txt);
     cursor.endEditBlock();
     m_regen_taglist = true; // just in case
 }
@@ -824,12 +825,12 @@ void CodeViewEditor::insertFromMimeData(const QMimeData* source)
         QMimeData nmd;
         if (source->hasText()) {
             QString txt = source->text();
-            txt = txt.normalized(QString::NormalizationForm_C);
+            txt = Utility::UseNFC(txt);
             nmd.setText(txt);
         }
         if (source->hasHtml()) {
             QString ht = source->html();
-            ht = ht.normalized(QString::NormalizationForm_C);
+            ht = Utility::UseNFC(ht);
             nmd.setHtml(ht);
         }
         QPlainTextEdit::insertFromMimeData(&nmd);
@@ -1034,9 +1035,9 @@ bool CodeViewEditor::FindNext(const QString &search_regex,
 int CodeViewEditor::Count(const QString &search_regex, Searchable::Direction direction, bool wrap, bool marked_text)
 {
     SPCRE *spcre = PCRECache::instance()->getObject(search_regex);
-    QString text= toPlainText();
+    QString txt= toPlainText();
     int start = 0;
-    int end = text.length();
+    int end = txt.length();
 
     if (marked_text) {
         if (!MoveToMarkedText(direction, wrap)) {
@@ -1047,14 +1048,14 @@ int CodeViewEditor::Count(const QString &search_regex, Searchable::Direction dir
     }
     if (!wrap) {
         if (direction == Searchable::Direction_Up) {
-            text = Utility::Substring(start, textCursor().position(), text);
+            txt = Utility::Substring(start, textCursor().position(), txt);
         } else {
-            text = Utility::Substring(textCursor().position(), end, text);
+            txt = Utility::Substring(textCursor().position(), end, txt);
         }
     } else if (marked_text) {
-        text = Utility::Substring(start, end, text);
+        txt = Utility::Substring(start, end, txt);
     }
-    return spcre->getEveryMatchInfo(text).count();
+    return spcre->getEveryMatchInfo(txt).count();
 }
 
 
@@ -1071,7 +1072,9 @@ bool CodeViewEditor::ReplaceSelected(const QString &search_regex, const QString 
     }
 
     // Convert to plain text or \s won't get newlines
-    const QString &document_text = toPlainText();
+    // assume already NFC normalized by earlier find
+    const QString document_text = toPlainText();
+    
     QString selected_text = Utility::Substring(selection_start, selection_end, document_text);
     QString replaced_text;
     bool replacement_made = false;

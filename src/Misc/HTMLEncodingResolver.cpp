@@ -105,7 +105,7 @@ QStringDecoder HTMLEncodingResolver::GetDecoderForHTML(const QByteArray &raw_tex
     QRegularExpressionMatch enc_mo = enc_re.match(text);
     if (enc_mo.hasMatch()) {
         QByteArray ba(enc_mo.captured(1).toLatin1());
-	ba = FixupCodePageMapping(ba);
+        ba = FixupCodePageMapping(ba);
         QStringDecoder decoder = QStringDecoder(ba);
         if (decoder.isValid()) {
             return decoder;
@@ -117,7 +117,7 @@ QStringDecoder HTMLEncodingResolver::GetDecoderForHTML(const QByteArray &raw_tex
     QRegularExpressionMatch char_mo = char_re.match(text);
     if (char_mo.hasMatch()) {
         QByteArray ba(char_mo.captured(1).toLatin1());
-	ba = FixupCodePageMapping(ba);
+        ba = FixupCodePageMapping(ba);
         QStringDecoder decoder = QStringDecoder(ba);
         if (decoder.isValid()) {
             return decoder;
@@ -129,9 +129,7 @@ QStringDecoder HTMLEncodingResolver::GetDecoderForHTML(const QByteArray &raw_tex
         return QStringDecoder("UTF-8");
     }
 
-    // Finally, let Qt guess and if it doesn't know it will return the codec
-    // for the current locale.
-    text = raw_text;
+    // Finally, let Qt guess
     return QStringDecoder::decoderForHtml(raw_text);
 }
 

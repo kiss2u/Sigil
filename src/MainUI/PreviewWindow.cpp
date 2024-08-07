@@ -113,12 +113,12 @@ PreviewWindow::PreviewWindow(QWidget *parent)
     m_Preview->setObjectName("webpreview");
     m_Preview->setFocusPolicy(Qt::StrongFocus);
 
-    m_binspect->setFocusPolicy(Qt::StrongFocus);
-    m_bselect->setFocusPolicy(Qt::StrongFocus);
-    m_bcopy->setFocusPolicy(Qt::StrongFocus);
-    m_breload->setFocusPolicy(Qt::StrongFocus);
-    m_bcycle->setFocusPolicy(Qt::StrongFocus);
-    m_bprint->setFocusPolicy(Qt::StrongFocus);
+    m_binspect->setFocusPolicy(Qt::TabFocus);
+    m_bselect->setFocusPolicy(Qt::TabFocus);
+    m_bcopy->setFocusPolicy(Qt::TabFocus);
+    m_breload->setFocusPolicy(Qt::TabFocus);
+    m_bcycle->setFocusPolicy(Qt::TabFocus);
+    m_bprint->setFocusPolicy(Qt::TabFocus);
 
     setTabOrder(m_binspect, m_bselect);
     setTabOrder(m_bselect, m_bcopy);
@@ -561,7 +561,6 @@ bool PreviewWindow::eventFilter(QObject *object, QEvent *event)
           QString hcolor = palette().color(QPalette::Highlight).name();
           QString user_color = Utility::GetEnvironmentVar("SIGIL_FOCUS_HIGHLIGHT_COLOR");
           if (!user_color.isEmpty() && user_color.startsWith("#") && user_color.length() == 7) {
-
               if (QColor::isValidColorName(user_color)) {
                   hcolor = user_color;
               }

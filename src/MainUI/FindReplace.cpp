@@ -171,7 +171,7 @@ void FindReplace::SetUpFindText()
             if (m_RegexOptionAutoTokenise && GetSearchMode() == FindReplace::SearchMode_Regex) {
                 selected_text = TokeniseForRegex(selected_text, false);
             }
-            selected_text = selected_text.normalized(QString::NormalizationForm_C);
+            selected_text = Utility::UseNFC(selected_text);
             ui.cbFind->setEditText(selected_text);
             // To allow the user to immediately click on Replace, we need to setup the
             // regex match as though the user had clicked on Find.
@@ -349,15 +349,6 @@ void FindReplace::RestartClicked()
     ShowMessage(tr("Search will restart"));
 }
 
-#if 0
-void FindReplace::AdvancedOptionsClicked()
-{
-    bool is_currently_visible = ui.tbRegexOptions->isVisible();
-    WriteSettingsAdvancedVisible(!is_currently_visible);
-    ShowHideAdvancedOptions();
-}
-#endif
-
 void FindReplace::keyPressEvent(QKeyEvent *event)
 {
     if (event->key() == Qt::Key_Escape) {
@@ -451,7 +442,7 @@ bool FindReplace::FindAnyText(QString text, bool escape)
     } else {
         search_text = text + "(?![^<>]*>)(?!.*<body[^>]*>)";
     }
-    search_text = search_text.normalized(QString::NormalizationForm_C);
+    search_text = Utility::UseNFC(search_text);
     ui.cbFind->setEditText(search_text);
     bool found = Find();
     ReadSettings();
@@ -476,7 +467,7 @@ void FindReplace::FindAnyTextInTags(QString text)
     // SetOptionWrap(true);
     SetRegexOptionTextOnly(false);
     text = text + "(?=[^<]*>)(?!(?:[^<\"]*\"[^<\"]*\")+\\s*/?>)";
-    text = text.normalized(QString::NormalizationForm_C);
+    text = Utility::UseNFC(text);
     ui.cbFind->setEditText(text);
     Find();
 
@@ -968,24 +959,6 @@ void FindReplace::SetCodeViewIfNeeded()
     }
 }
 
-#if 0
-// This originally was the code at the end of SetCodeViewIfNeeded(force)
-// But it made no sense cause it did not really accomplish anything
-// where it was.  Even splitting it out into a routine to be done
-// at the end did not help so I am just leaving it here in case
-// this decision comes back to bite me!
-void FindReplace::RestoreFRFocusIfNeeded(bool had_focus, bool force)
-{
-    if (force ||
-        (!m_LookWhereCurrentFile && (isWhereHTML() || isWhereCSS() || isWhereOPF() || isWhereNCX())))
-    {
-        if (had_focus) {
-            SetFocus();
-        }
-    }
-}
-#endif
-
 // Displays a message to the user informing him
 // that his last search term could not be found.
 void FindReplace::CannotFindSearchTerm()
@@ -1054,14 +1027,14 @@ QString FindReplace::PrependRegexOptionToSearch(const QString &option, const QSt
 QString FindReplace::GetFind()
 {
     QString txt = ui.cbFind->lineEdit()->text();
-    txt = txt.normalized(QString::NormalizationForm_C);
+    txt = Utility::UseNFC(txt);
     return txt;
 }
 
 QString FindReplace::GetReplace()
 {
     QString txt = ui.cbReplace->lineEdit()->text();
-    txt = txt.normalized(QString::NormalizationForm_C);
+    txt = Utility::UseNFC(txt);
     return txt;
 }
 
@@ -1488,7 +1461,7 @@ void FindReplace::UpdatePreviousFindStrings(const QString &text)
     QString new_find_string;
 
     if (!text.isNull()) {
-        new_find_string = text.normalized(QString::NormalizationForm_C);
+        new_find_string = Utility::UseNFC(text);
     } else {
         new_find_string = GetFind();
     }
@@ -1509,7 +1482,7 @@ void FindReplace::UpdatePreviousReplaceStrings(const QString &text)
 {
     QString new_replace_string;
     if (!text.isNull()) {
-        new_replace_string = text.normalized(QString::NormalizationForm_C);
+        new_replace_string = Utility::UseNFC(text);
     } else {
         new_replace_string = GetReplace();
     }
@@ -1700,35 +1673,6 @@ void FindReplace::ShowHide()
     }
 }
 
-#if 0
-void FindReplace::ShowHideAdvancedOptions()
-{
-    SettingsStore settings;
-    settings.beginGroup(SETTINGS_GROUP);
-    bool show_advanced = settings.value("advanced_visible", true).toBool();
-    settings.endGroup();
-    ui.optionsl->setVisible(show_advanced);
-    ui.space0->setVisible(show_advanced);
-    ui.space1->setVisible(show_advanced);
-    ui.space2->setVisible(show_advanced);
-    ui.tbRegexOptions->setVisible(show_advanced);
-    ui.chkOptionWrap->setVisible(show_advanced);
-    ui.chkOptionTextOnly->setVisible(show_advanced);
-    ui.replaceFind->setVisible(show_advanced);
-    ui.count->setVisible(show_advanced);
-    ui.revalid->setVisible(show_advanced);
-    QIcon icon;
-
-    if (show_advanced) {
-        icon.addFile(QString::fromUtf8(":/main/chevron-up.svg"));
-        ui.advancedShowHide->setIcon(icon);
-    } else {
-        icon.addFile(QString::fromUtf8(":/main/chevron-down.svg"));
-        ui.advancedShowHide->setIcon(icon);
-    }
-}
-#endif
-
 void FindReplace::WriteSettingsVisible(bool visible)
 {
     SettingsStore settings;
@@ -1736,16 +1680,6 @@ void FindReplace::WriteSettingsVisible(bool visible)
     settings.setValue("visible", visible);
     settings.endGroup();
 }
-
-#if 0
-void FindReplace::WriteSettingsAdvancedVisible(bool visible)
-{
-    SettingsStore settings;
-    settings.beginGroup(SETTINGS_GROUP);
-    settings.setValue("advanced_visible", visible);
-    settings.endGroup();
-}
-#endif
 
 void FindReplace::WriteSettings()
 {
@@ -1920,20 +1854,10 @@ void FindReplace::ReplaceCurrentSearch()
 
     m_IsSearchGroupRunning = true;
     
-#if 0
-    foreach(SearchEditorModel::searchEntry * search_entry, search_entries) {
-        LoadSearch(search_entry);
-        if (ReplaceCurrent()) {
-            break;
-        } else {
-            m_MainWindow->SearchEditorRecordEntryAsCompleted(search_entry);
-        }
-    }
-#else
     SearchEditorModel::searchEntry * search_entry = search_entries.first();
     LoadSearch(search_entry);
     ReplaceCurrent();
-#endif
+
     m_IsSearchGroupRunning = false;
 }
 
@@ -2099,7 +2023,7 @@ void FindReplace::TokeniseSelection()
     if (ui.cbFind->lineEdit()->hasSelectedText()) {
         // We want to tokenise only the selection
         text = ui.cbFind->lineEdit()->selectedText();
-        text = text.normalized(QString::NormalizationForm_C);
+        text = Utility::UseNFC(text);
     } else {
         // We will tokenise the whole thing
         text = GetFind();
@@ -2121,7 +2045,7 @@ void FindReplace::TokeniseSelection()
 
 QString FindReplace::TokeniseForRegex(const QString &text, bool includeNumerics)
 {
-    QString new_text(text.normalized(QString::NormalizationForm_C));
+    QString new_text(Utility::UseNFC(text));
 
     // Convert any form of newline or tabs to multiple spaces
     new_text.replace(QRegularExpression("\\R"), "  ");
